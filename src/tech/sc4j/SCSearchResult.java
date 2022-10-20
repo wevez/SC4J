@@ -29,11 +29,17 @@ public class SCSearchResult {
 				break;
 			}
 			if (startIndex != -1 && endIndex != -1) {
-				this.musics.add(new SCMusic(data.substring(startIndex, endIndex)));
+				try {
+					this.musics.add(new SCMusic(data.substring(startIndex, endIndex)));
+				} catch (Exception e) {
+					
+				}
 				startIndex = -1;
 				endIndex = -1;
 			}
 		}
 	}
+	
+	public List<SCMusic> getMusicItems() { return this.musics; }
 
 }
