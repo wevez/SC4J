@@ -51,9 +51,8 @@ public class MP3Player {
   private transient volatile int volume = 50;
 
   private transient volatile Thread playingThread = null;
-  private transient volatile int playingIndex = 0;
   private transient volatile SourceDataLine playingSource = null;
-  private transient volatile int playingSourceVolume = 0;
+  private transient volatile int playingSourceVolume = 50;
   
   private Object object;
   
@@ -96,7 +95,7 @@ public class MP3Player {
 	  return this;
   }
   
-  public MP3Player set(InputStream inputStream) {
+  public MP3Player set(SoundStream inputStream) {
 	  object = inputStream;
 	  return this;
   }
@@ -120,20 +119,22 @@ public class MP3Player {
 		  isStopped = false;
 	  }
 	  if (playingThread == null) {
-		  playingThread = new Thread() {
-    	  public void run() {
+		  playingThread = new Thread(() -> {
     		  InputStream inputStream = null;
     		  try {
-    			  if (object instanceof InputStream) {
-    				  inputStream = (InputStream) object;
-    			  } else if (object instanceof File) {
-    				  inputStream = new FileInputStream((File) object);
-    			  } else if (object instanceof URL) {
-    				  inputStream = ((URL) object).openStream();
+    			  SoundStream soundStream = null;
+    			  if (object instanceof SoundStream) {
+    				  soundStream = (SoundStream) object;
     			  } else {
-    				  throw new IOException("this is impossible; how come the play list contains this kind of object? :: " + object.getClass());
+    				  if (object instanceof File) {
+	    				  inputStream = new FileInputStream((File) object);
+	    			  } else if (object instanceof URL) {
+	    				  inputStream = ((URL) object).openStream();
+	    			  } else {
+	    				  throw new IOException("this is impossible; how come the play list contains this kind of object? :: " + object.getClass());
+	    			  }
+    				  soundStream = new SoundStream(inputStream);
     			  }
-    			  SoundStream soundStream = new SoundStream(inputStream);
     			  Decoder decoder = new Decoder();
     			  while (true) {
     				  synchronized (MP3Player.this) {
@@ -155,6 +156,7 @@ public class MP3Player {
     				  }
     				  try {
     					  Frame frame = soundStream.readFrame();
+    					  
     					  if (frame == null) {
     						  break;
     					  }
@@ -166,7 +168,6 @@ public class MP3Player {
     						  playingSource = (SourceDataLine) line;
     						  playingSource.open(format);
     						  playingSource.start();
-    						  System.out.println("A");
     					  }
     					  SampleBuffer output = (SampleBuffer) decoder.decodeFrame(frame, soundStream);
     					  short[] buffer = output.getBuffer();
@@ -223,14 +224,12 @@ public class MP3Player {
     				  }
     			  }
     		  }
-    		  boolean skipForwardAllowed;
     		  synchronized (MP3Player.this) {
-    			  skipForwardAllowed = !isStopped;
     			  isPaused = false;
     			  isStopped = true;
     		  }
     		  playingThread = null;
-    	  }
+    	  }) {
 		  };
 		  playingThread.start();
 	  }

@@ -6,7 +6,7 @@ import tech.sc4j.util.SCWebUtil;
 public class SC4J {
 	
 	public static void main(final String[] args) throws MalformedURLException {
-		final SCSearchResult r = search("Sheep in the light");
+		final SCSearchResult r = search("Twinkle night");
 		r.getMusicItems().get(0).play();
 	}
 	

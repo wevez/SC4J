@@ -9,7 +9,8 @@ import tech.sc4j.util.SCWebUtil;
 
 public class SCMusic {
 	
-	private final String title, artwork_url, trackId, trackAuthorization;
+	private final String title, artwork_url, trackId, trackAuthorization, artist, kind;
+	private int likes, length;
 	//private final Date postDate;
 	
 	public SCMusic(final String data) {
@@ -17,12 +18,29 @@ public class SCMusic {
 		this.artwork_url = SCWebUtil.clip(data, "\"artwork_url\":\"", "\",");
 		this.trackId = SCWebUtil.clip(data, "\"media\":{\"transcodings\":[{\"url\":\"https://api-v2.soundcloud.com/media/soundcloud:tracks:", "/stream/hls");
 		this.trackAuthorization = SCWebUtil.clip(data, "\",\"track_authorization\":\"", "\",");
+		this.artist = SCWebUtil.clip(data, "\"username\":\"", "\",");
+		this.kind = SCWebUtil.clip(data, "\"kind\":\"", "\",");
+		final String likeString = SCWebUtil.clip(data, "\"likes_count\":", ",");
+		try {
+			this.likes = Integer.parseInt(likeString);
+		} catch (NumberFormatException e) {
+			this.likes = -1;
+		}
+		this.length = -1;
 		//this.postDate = new Date(SCWebUtil.clip(data, "\"created_at\":\"", "\","));
 	}
 	
 	public String getTitle() { return this.title; }
 	
 	public String getArtworkURL() { return this.artwork_url; }
+	
+	public String getArtist() { return this.artist; }
+	
+	public String getKind() { return this.kind; }
+	
+	public int getLikes() { return this.likes; }
+	
+	public int getLength() { return this.length; }
 	
 	//public Date getPostDate() { return this.postDate; }
 	
@@ -34,26 +52,30 @@ public class SCMusic {
 				 "{\"url\":\"",
 				 "\"}"
 				)).split("#EXTINF:");
+		 int lengthMS = 0;
 		 final List<EXTINFData> dataObjects = new ArrayList<>();
 		 for (int i = 1, l = extinf_datas.length; i < l; i++) {
 			 final String s = extinf_datas[i];
 			 try {
 				 final int sharpIndex = s.indexOf('#');
-				 dataObjects.add(new EXTINFData(Float.parseFloat(s.substring(0, 8)), s.substring(9, sharpIndex == -1 ? s.length() : sharpIndex)));
+				 EXTINFData data = new EXTINFData(Float.parseFloat(s.substring(0, 8)), s.substring(9, sharpIndex == -1 ? s.length() : sharpIndex));
+				 dataObjects.add(data);
+				 lengthMS += data.getLength();
 			 } catch (Exception e) {
 				 
 			 }
 		 }
-		 final MP3Player player = new MP3Player();
-		 for (int i = 0, l = dataObjects.size(); i < l; i++) {
-			 player.set(dataObjects.get(i).getStream()).play();
-			 try {
-				Thread.sleep(dataObjects.get(i).getLength());
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		 }
+		 this.length = lengthMS / 1000;
+		 new Thread(() -> {
+			 for (int i = 0, l = dataObjects.size(); i < l; i++) {
+				 new MP3Player().set(dataObjects.get(i).getStream()).play();
+				 try {
+					Thread.sleep(dataObjects.get(i).getLength() - 35); // EXTINFは34msくらいのラグがあるんじゃ
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			 }
+		 }).start();
 	}
 
 }
