@@ -4,14 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jaco.mp3.player.MP3Player;
+import tech.sc4j.SC4J;
 import tech.sc4j.player.EXTINFData;
 import tech.sc4j.util.SCWebUtil;
 
 public class SCMusic {
 	
+	private boolean paused;
 	private final String title, artwork_url, trackId, trackAuthorization, artist, kind;
 	private int likes, length;
 	//private final Date postDate;
+	
+	private Thread playingThread;
 	
 	public SCMusic(final String data) {
 		this.title = SCWebUtil.clip(data, "\"title\":\"", "\",");
@@ -62,20 +66,29 @@ public class SCMusic {
 				 dataObjects.add(data);
 				 lengthMS += data.getLength();
 			 } catch (Exception e) {
-				 
+				 e.printStackTrace();
 			 }
 		 }
 		 this.length = lengthMS / 1000;
-		 new Thread(() -> {
-			 for (int i = 0, l = dataObjects.size(); i < l; i++) {
-				 new MP3Player().set(dataObjects.get(i).getStream()).play();
-				 try {
-					Thread.sleep(dataObjects.get(i).getLength() - 35); // EXTINFは34msくらいのラグがあるんじゃ
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			 }
-		 }).start();
+		 if (playingThread == null) {
+			 playingThread = new Thread(() -> {
+				 for (int i = 0, l = dataObjects.size(); i < l; i++) {
+					 SC4J.instance.setPlayer(new MP3Player().set(dataObjects.get(i).getStream())).play();
+					 try {
+						 Thread.sleep(dataObjects.get(i).getLength() - 35); // EXTINF縺ｯ34ms縺上ｉ縺�縺ｮ繝ｩ繧ｰ縺後≠繧九ｓ縺倥ｃ
+					 } catch (InterruptedException e) {
+						 e.printStackTrace();
+					 }
+					 while (SC4J.instance.isPaused()) { }
+				 }
+				 SC4J.instance.onMusicEnd();
+			 });
+		 }
+		 playingThread.start();
+	}
+	
+	public void stopThread() {
+		playingThread.stop();
 	}
 
 }
