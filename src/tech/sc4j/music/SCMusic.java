@@ -72,8 +72,18 @@ public class SCMusic {
 		 this.length = lengthMS / 1000;
 		 if (playingThread == null) {
 			 playingThread = new Thread(() -> {
+				 try {
+					 dataObjects.get(0).loadStream();
+				 } catch (Exception e) {
+					 e.printStackTrace();
+				 }
 				 for (int i = 0, l = dataObjects.size(); i < l; i++) {
 					 SC4J.instance.setPlayer(new MP3Player().set(dataObjects.get(i).getStream())).play();
+					 try {
+						 if (i <= l - 1) dataObjects.get(i + 1).loadStream();
+					 } catch (Exception e) {
+						 e.printStackTrace();
+					 }
 					 try {
 						 Thread.sleep(dataObjects.get(i).getLength() - 35); // EXTINF縺ｯ34ms縺上ｉ縺�縺ｮ繝ｩ繧ｰ縺後≠繧九ｓ縺倥ｃ
 					 } catch (InterruptedException e) {

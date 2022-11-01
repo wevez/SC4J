@@ -9,11 +9,20 @@ import jaco.mp3.resources.SoundStream;
 public final class EXTINFData {
 	
 	private final short length;
-	private final SoundStream inputStream;
+	private SoundStream inputStream;
+	private final String url;
 	
-	public EXTINFData(float length, final String url) throws MalformedURLException, IOException {
+	public EXTINFData(float length, final String url) {
 		this.length = (short) (length * 1000);
-		this.inputStream = new SoundStream(new URL(url).openStream());
+		this.url = url;
+	}
+	
+	public void loadStream() {
+		try {
+			this.inputStream = new SoundStream(new URL(url).openStream());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public short getLength() { return this.length; }
