@@ -9,9 +9,11 @@ import java.util.List;
 
 public class SCWebUtil {
 	
-	public static String agent1 = "User-Agent";
-    public static String agent2 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 OPR/91.0.4516.72 (Edition GX-CN)";
-	
+	private static final String agent1 = "User-Agent",
+            agent2 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 OPR/91.0.4516.72 (Edition GX-CN)";
+
+    private static String clientId;
+
     public static List<String> visitSiteThreaded(final String urly) {
     	final ArrayList<String> lines = new ArrayList<String>();
 		URL url;
@@ -56,8 +58,16 @@ public class SCWebUtil {
     }
     
     public static String titleToURL(final String title, int limit, int offset) {
-    	return String.format("https://api-v2.soundcloud.com/search?q=%s&client_id=jOJjarVXJfZlI309Up55k93EUDG7ILW6&limit=%d&offset=%d",
+        if (clientId == null) {
+            final String a = visitSiteThreaded2("https://soundcloud.com/").
+                    split("<script crossorigin src=\"https://a-v2.sndcdn.com/assets/")[5];
+            clientId = clip(visitSiteThreaded2(String.format("https://a-v2.sndcdn.com/assets/%s", a.substring(0, a.indexOf("\"")))),
+            "client_id=",
+            "\"");
+        }
+    	return String.format("https://api-v2.soundcloud.com/search?q=%s&client_id=%s&limit=%d&offset=%d",
     			formatTitle(title),
+                clientId,
     			limit,
     			offset);
     }

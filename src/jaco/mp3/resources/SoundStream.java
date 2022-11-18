@@ -265,38 +265,27 @@ public final class SoundStream implements BitstreamErrors
 	public Frame readFrame() throws BitstreamException
 	{
 		Frame result = null;
-		try
-		{
+		try {
 			result = readNextFrame();
 			// E.B, Parse VBR (if any) first frame.
-			if (firstframe == true)
-			{
+			if (firstframe == true) {
 				result.parseVBR(frame_bytes);
 				firstframe = false;
-			}			
-		}
-		catch (BitstreamException ex)
-		{
-			if ((ex.getErrorCode()==INVALIDFRAME))
-			{
+			}
+		} catch (BitstreamException ex) {
+			if ((ex.getErrorCode() == INVALIDFRAME)) {
 				// Try to skip this frame.
 				//System.out.println("INVALIDFRAME");
-				try
-				{
+				try {
 					closeFrame();
 					result = readNextFrame();
-				}
-				catch (BitstreamException e)
-				{
-					if ((e.getErrorCode()!=STREAM_EOF))
-					{
+				} catch (BitstreamException e) {
+					if ((e.getErrorCode() != STREAM_EOF)) {
 						// wrap original exception so stack trace is maintained.
 						throw newBitstreamException(e.getErrorCode(), e);
 					}
 				}
-			}
-			else if ((ex.getErrorCode()!=STREAM_EOF))
-			{
+			} else if ((ex.getErrorCode() != STREAM_EOF)) {
 				// wrap original exception so stack trace is maintained.
 				throw newBitstreamException(ex.getErrorCode(), ex);
 			}
@@ -311,10 +300,7 @@ public final class SoundStream implements BitstreamErrors
 	 */
 	private Frame readNextFrame() throws BitstreamException
 	{
-		if (framesize == -1)
-		{
-			nextFrame();
-		}
+		if (framesize == -1) nextFrame();
 		return header;
 	}
 

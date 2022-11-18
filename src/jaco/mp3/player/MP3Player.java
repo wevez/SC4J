@@ -53,6 +53,7 @@ public class MP3Player {
   private transient volatile Thread playingThread = null;
   private transient volatile SourceDataLine playingSource = null;
   private transient volatile int playingSourceVolume = 50;
+  private long lastMS, totalMS;
   
   private Object object;
   
@@ -104,6 +105,7 @@ public class MP3Player {
    * Starts the play (or resume if is paused).
    */
   public void play() {
+	  this.lastMS = System.currentTimeMillis();
 	  synchronized (MP3Player.this) {
 		  if (isPaused) {
 			  isPaused = false;
@@ -156,7 +158,6 @@ public class MP3Player {
     				  }
     				  try {
     					  Frame frame = soundStream.readFrame();
-    					  
     					  if (frame == null) {
     						  break;
     					  }
@@ -256,9 +257,13 @@ public class MP3Player {
 		  return isPaused;
 	  }
   }
+  
+  public long getTotalMS() {
+	  return this.totalMS;
+  }
 
   public void stop() {
-
+	  this.totalMS += System.currentTimeMillis() - lastMS;
     synchronized (MP3Player.this) {
       isPaused = false;
       isStopped = true;
@@ -340,9 +345,10 @@ public class MP3Player {
   private byte[] toByteArray(short[] ss, int offs, int len) {
     byte[] bb = new byte[len * 2];
     int idx = 0;
+    int total = 0;
     short s;
     while (len-- > 0) {
-      s = ss[offs++];
+      total += s = ss[offs++];
       bb[idx++] = (byte) s;
       bb[idx++] = (byte) (s >>> 8);
     }

@@ -25,7 +25,13 @@ public final class EXTINFData {
 		}
 	}
 	
-	public short getLength() { return this.length; }
+	public short getLength() {
+		final short returnValue = (short) (this.length - 300);
+		if (returnValue <= 0) {
+			return 800;
+		}
+		else return returnValue;
+	}
 	
 	public SoundStream getStream() { return this.inputStream; }
 
