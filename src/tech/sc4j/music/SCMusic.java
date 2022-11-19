@@ -9,19 +9,19 @@ import tech.sc4j.player.EXTINFData;
 import tech.sc4j.util.SCWebUtil;
 
 public class SCMusic {
-	
-	private boolean paused, flag;
+
 	private final String title, artwork_url, trackId, trackAuthorization, artist, kind;
-	private int likes, length, playingIndex;
+	private int likes, length;
+	private volatile int playingIndex;
 
 	//private final Date postDate;
 	
 	private Thread playingThread;
-	private boolean stoped = false;
+	private volatile boolean paused;
 	private long lastMS, deltaMS;
 	private MP3Player currentPlayer;
 	
-	private final List<EXTINFData> dataObjects = new ArrayList<>();;
+	private final List<EXTINFData> dataObjects = new ArrayList<>();
 	
 	public SCMusic(final String data) {
 		this.title = SCWebUtil.clip(data, "\"title\":\"", "\",");
@@ -55,11 +55,13 @@ public class SCMusic {
 	//public Date getPostDate() { return this.postDate; }
 	
 	public void play() {
+		paused = false;
 		playingIndex = 0;
 		if (dataObjects.isEmpty()) {
 			 final String[] extinf_datas = SCWebUtil.visitSiteThreaded2(SCWebUtil.clip(SCWebUtil.visitSiteThreaded2(String.format(
-					 "https://api-v2.soundcloud.com/media/soundcloud:tracks:%s/stream/hls?client_id=8m4K5d2x4mNmUHLhLmsGq9vxE3dDkxCm&track_authorization=%s",
+					 "https://api-v2.soundcloud.com/media/soundcloud:tracks:%s/stream/hls?client_id=%s&track_authorization=%s",
 					 this.trackId,
+					 SCWebUtil.getClientId(),
 					 this.trackAuthorization)),
 					 "{\"url\":\"",
 					 "\"}"
@@ -78,40 +80,40 @@ public class SCMusic {
 			 }
 			 this.length = lengthMS / 1000;
 		}
-		 if (playingThread == null) {
-			 playingThread = new Thread(() -> {
-				 dataObjects.get(0).loadStream();
-				 for (int i = 0, l = dataObjects.size(); i < l; i++) {
-					 playingIndex = i;
-					 final EXTINFData d = dataObjects.get(playingIndex);
-					 currentPlayer = new MP3Player().set(d.getStream());
-					 currentPlayer.play();
-					 lastMS = System.currentTimeMillis();
-					 new Thread(() -> { if (playingIndex < l - 1) dataObjects.get(playingIndex + 1).loadStream(); }).start();
-					 final long waitMS = d.getLength() + lastMS;
-					 
-					 while (System.currentTimeMillis() < waitMS) {
-						 if (!currentPlayer.isPlaying()) {
-							 if (flag) {
-								 lastMS = System.currentTimeMillis() - deltaMS;
-							 } else {
-								 lastMS = System.currentTimeMillis() - (deltaMS = System.currentTimeMillis() - lastMS);
-								 flag = true;
-							 }
+		 playingThread = new Thread(() -> {
+			 dataObjects.get(playingIndex).loadStream();
+			 for (int i = playingIndex, l = dataObjects.size(); i < l; i++) {
+				 boolean flag = false;
+				 playingIndex = i;
+				 final EXTINFData d = dataObjects.get(playingIndex);
+				 currentPlayer = new MP3Player().set(d.getStream());
+				 currentPlayer.play();
+				 lastMS = System.currentTimeMillis();
+				 new Thread(() -> { if (playingIndex < l - 1) dataObjects.get(playingIndex + 1).loadStream(); }).start();
+				 final long waitMS = d.getLength() + lastMS;
+
+				 while (System.currentTimeMillis() < waitMS) {
+					 if (!currentPlayer.isPlaying()) {
+						 if (flag) {
+							 lastMS = System.currentTimeMillis() - deltaMS;
+						 } else {
+							 lastMS = System.currentTimeMillis() - (deltaMS = System.currentTimeMillis() - lastMS);
+							 flag = true;
 						 }
-						 if (this.stoped) return;
 					 }
-					 playingIndex++;
+					 if (currentPlayer.isPaused()) break;
+					 if (this.paused) return;
 				 }
-				 SC4J.onMusicEnd();
-			 });
-		 }
+				 playingIndex++;
+			 }
+			 SC4J.onMusicEnd();
+		 });
 		 playingThread.start();
 	}
 	
 	public void pause() {
 		if (this.currentPlayer != null) {
-			this.currentPlayer.pause();
+			this.currentPlayer.stop();
 		}
 	}
 	
@@ -123,7 +125,8 @@ public class SCMusic {
 		if (this.currentPlayer != null) {
 			this.currentPlayer.pause();
 		}
-		this.stoped = true;
+		this.playingThread.stop();
+		this.paused = true;
 	}
 	
 	public long getTotalMS() {
@@ -136,17 +139,16 @@ public class SCMusic {
 	
 	// TODO
 	public void setMS(long ms) {
+		this.stopThread();
 		long totalMS = 0l;
-		this.currentPlayer.pause();
 		for (int i = 0, l = dataObjects.size() - 1; i < l; i++) {
 			if ((totalMS += dataObjects.get(i).getLength()) > ms) {
-				
 				playingIndex = i;
-				lastMS = 0;
 				break;
 			}
 		}
-		
+
+		this.play();
 	}
 	
 }

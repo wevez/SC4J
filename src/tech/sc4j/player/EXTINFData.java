@@ -28,7 +28,7 @@ public final class EXTINFData {
 	public short getLength() {
 		final short returnValue = (short) (this.length - 300);
 		if (returnValue <= 0) {
-			return 800;
+			return 1000;
 		}
 		else return returnValue;
 	}

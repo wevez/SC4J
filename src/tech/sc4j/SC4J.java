@@ -10,13 +10,15 @@ import tech.sc4j.util.SCWebUtil;
 public class SC4J {
 	
 	private static SCMusic currentMusic;
-	private static int songIndex, resultOffset, playingTime;
+	private static int songIndex, resultOffset;
 	private static String lastSearchTitle;
 	private static final List<SCMusic> currentResult;
 	private static volatile boolean paused;
 	
 	public static boolean shuffling;
 	public static RepeatType repeatType;
+
+	private static volatile int volume = 50; // 0 to 100
 
 	static {
 		repeatType = RepeatType.Repeat;
@@ -38,7 +40,6 @@ public class SC4J {
 	
 	public static void play(int index) {
 		if (currentResult == null) return;
-		playingTime = 0;
 		songIndex = index;
 		paused = false;
 		if (songIndex >= currentResult.size()) {
@@ -70,7 +71,9 @@ public class SC4J {
 	
 	public static void skip(boolean back) {
 		if (currentResult == null) return;
-		// TODO
+		songIndex += back ? 1 : -1;
+		if (songIndex < 0) songIndex = 0;
+		play(songIndex);
 	}
 	
 	public static List<SCMusic> getResult() {
@@ -100,5 +103,9 @@ public class SC4J {
 		resultOffset++;
 		currentResult.addAll(new SCSearchResult(SCWebUtil.titleToURL(lastSearchTitle, 20, resultOffset)).getMusicItems());
 	}
+
+	public static void setVolume(int volume1) { volume = volume1; }
+
+	public static int getVolume() { return volume; }
 
 }

@@ -2,10 +2,10 @@ package tech.sc4j.util;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URLEncoder;
 
 public class SCWebUtil {
 	
@@ -13,25 +13,6 @@ public class SCWebUtil {
             agent2 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 OPR/91.0.4516.72 (Edition GX-CN)";
 
     private static String clientId;
-
-    public static List<String> visitSiteThreaded(final String urly) {
-    	final ArrayList<String> lines = new ArrayList<String>();
-		URL url;
-        try {
-            String line;
-            url = new URL(urly);
-            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.addRequestProperty(agent1, agent2);
-            final InputStreamReader reader = new InputStreamReader(connection.getInputStream(), "Shift_JIS");
-            final BufferedReader in = new BufferedReader(reader);
-            while ((line = in.readLine()) != null) {
-                lines.add(line);
-            }
-        } catch (Exception e) {
-        	e.printStackTrace();
-        }
-		return lines;
-	}
     
     public static String visitSiteThreaded2(final String urly) {
     	final StringBuffer buffer = new StringBuffer();
@@ -57,7 +38,12 @@ public class SCWebUtil {
     	return target.substring(startIndex, target.indexOf(last, startIndex));
     }
     
-    public static String titleToURL(final String title, int limit, int offset) {
+    public static String titleToURL(String title, int limit, int offset) {
+        try {
+            title = URLEncoder.encode(title, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         if (clientId == null) {
             final String a = visitSiteThreaded2("https://soundcloud.com/").
                     split("<script crossorigin src=\"https://a-v2.sndcdn.com/assets/")[5];
@@ -72,8 +58,8 @@ public class SCWebUtil {
     			offset);
     }
     
-    private static String formatTitle(final String title) {
-    	return title.replaceAll(" ", "%20");
-    }
+    private static String formatTitle(final String title) { return title.replaceAll(" ", "%20"); }
+
+    public static String getClientId() { return clientId; }
 
 }

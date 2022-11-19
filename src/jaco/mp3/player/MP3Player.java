@@ -21,6 +21,7 @@ import jaco.mp3.resources.Decoder;
 import jaco.mp3.resources.Frame;
 import jaco.mp3.resources.SampleBuffer;
 import jaco.mp3.resources.SoundStream;
+import tech.sc4j.SC4J;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,7 +49,7 @@ public class MP3Player {
   private transient boolean isPaused = false;
   private transient boolean isStopped = true;
 
-  private transient volatile int volume = 50;
+  private InputStream inputStream;
 
   private transient volatile Thread playingThread = null;
   private transient volatile SourceDataLine playingSource = null;
@@ -122,7 +123,6 @@ public class MP3Player {
 	  }
 	  if (playingThread == null) {
 		  playingThread = new Thread(() -> {
-    		  InputStream inputStream = null;
     		  try {
     			  SoundStream soundStream = null;
     			  if (object instanceof SoundStream) {
@@ -147,7 +147,7 @@ public class MP3Player {
     						  if (playingSource != null) {
     							  playingSource.flush();
     						  }
-    						  playingSourceVolume = volume;
+    						  playingSourceVolume = SC4J.getVolume();
     						  try {
     							  MP3Player.this.wait();
     						  } catch (InterruptedException e) {
@@ -171,9 +171,8 @@ public class MP3Player {
     						  playingSource.start();
     					  }
     					  SampleBuffer output = (SampleBuffer) decoder.decodeFrame(frame, soundStream);
-    					  short[] buffer = output.getBuffer();
-    					  int offs = 0;
-    					  int len = output.getBufferLength();
+    					  final short[] buffer = output.getBuffer();
+    					  final int len = output.getBufferLength(), volume = SC4J.getVolume();
     					  if (playingSourceVolume != volume) {
     						  if (playingSourceVolume > volume) {
     							  playingSourceVolume--;
@@ -188,7 +187,7 @@ public class MP3Player {
     						  }
     						  setVolume(playingSource, playingSourceVolume);
     					  }
-    					  playingSource.write(toByteArray(buffer, offs, len), 0, len * 2);
+    					  playingSource.write(toByteArray(buffer, 0, len), 0, len * 2);
     					  soundStream.closeFrame();
     				  } catch (Exception e) {
     					  e.printStackTrace();
@@ -282,34 +281,6 @@ public class MP3Player {
     synchronized (MP3Player.this) {
       return isStopped;
     }
-  }
-
-  /**
-   * Sets a new volume for this player. The value is actually the percent value,
-   * so the value must be in interval [0..100].
-   * 
-   * @param volume
-   *          the new volume
-   * 
-   * @throws IllegalArgumentException
-   *           if the volume is not in interval [0..100]
-   */
-  public MP3Player setVolume(int volume) {
-
-    if (volume < 0 || volume > 100) {
-      throw new IllegalArgumentException("Wrong value for volume, must be in interval [0..100].");
-    }
-
-    this.volume = volume;
-
-    return this;
-  }
-
-  /**
-   * Returns the actual volume.
-   */
-  public int getVolume() {
-    return volume;
   }
 
 
