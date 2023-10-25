@@ -1,13 +1,19 @@
-import tech.sc4j.SC4J;
+import tech.tenamen.sc4j.SCSearchResult;
 
 public class Main {
+    public static void main(String[] args) {
+        final CustomSC4J sc4J = new CustomSC4J();
 
-    public static void main(String[] args) throws InterruptedException {
-        SC4J.search("KOTONOHOUSE In my world");
-        SC4J.play(1);
-        Thread.sleep(50000);
-        System.out.println("Started");
-        SC4J.getMusic().setMS(10000);
+        sc4J.startSearch("seikin");
+
+        for (SCSearchResult searchResult : sc4J.getSearchResults()) {
+            System.out.println(searchResult.getTitle());
+        }
+
+        sc4J.continueSearch();
+
+        sc4J.getSearchResults().forEach(s -> {
+            System.out.println(s.getTitle() + ";" + s.getThumbnailURL());
+        });
     }
-
 }

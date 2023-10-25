@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/tech.mania.sc4j.iml" filepath="$PROJECT_DIR$/tech.mania.sc4j.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SC4J.iml" filepath="$PROJECT_DIR$/SC4J.iml" />
     </modules>
   </component>
 </project>
