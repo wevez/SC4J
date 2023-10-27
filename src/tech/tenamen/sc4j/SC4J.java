@@ -81,13 +81,40 @@ public abstract class SC4J {
                             user.get("id").getAsInt()
                     );
 
+                    final String trackId = j
+                            .getAsJsonObject("media")
+                            .getAsJsonArray("transcodings")
+                            .get(1).getAsJsonObject()
+                            .get("url").getAsString();
+                    final String trackAuth = j.get("track_authorization").getAsString();
+
                     this.SEARCH_RESULTS.add(new SCSearchResult(
                             title,
                             publisher,
-                            argworkURL
+                            argworkURL,
+                            trackId,
+                            trackAuth
                             )
                     );
                 });
+    }
+
+    public final String getMP3URLOf(final SCSearchResult result) {
+        ensureClientId();
+
+        final String response = this.getHTTP(
+                String.format(
+                        "%s?client_id=%s&track_authorization=%s",
+                        result.getTrackId(),
+                        clientId,
+                        result.getTrackAuth()
+                ),
+                USER_AGENT
+        );
+
+        final JsonObject responseObject = GSON.fromJson(response, JsonObject.class);
+
+        return responseObject.get("url").getAsString();
     }
 
     private final void ensureClientId() {
