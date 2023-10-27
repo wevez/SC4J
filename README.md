@@ -1,4 +1,4 @@
-# YT4J
+# SC4J
 SoundCloud API for Java.
   
 ## How to use
