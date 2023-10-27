@@ -1,21 +1,12 @@
-# SC4J
- SoundCloud API for java which one allows you to play soundcloud music on your java apps!
-# Functions
- ## SC4J.search(String title)  
- Searches musics.   
- You can get the search result by the following function.  
- ## SC4J.getResult()  
- Returns search result.  
- ## SC4J.play(int index)  
- Plays music which is containsed in search result.  
-The index is same one in getResult()  
- ## SC4J.getMusic()  
- Returns the playing music. If nothinh is played, returns null.  
- You can get details about this one such as Title, Artist and ArtworkURL.  
- ### Example  
-    final SCMusic playingMusic = SC4J.getMusic();  
-    if (playingMusic != null) {  
-        System.out.println(String.format("Now playing %s by %s", playingMusic.getTitle(), playingMusic.getArtist()));  
-    }  
-
-## Contributes and Issues are welcome.  
+# YT4J
+SoundCloud API for Java.
+  
+## How to use
+- Create a class that inherits from SC4J and implement the getHTTP functions.
+[Example](https://github.com/wevez/SC4J/blob/main/src/CustomSC4J.javaa)
+- Create an instance of your custom SC4J and enjoy your scraping!
+[Example](https://github.com/wevez/SC4J/blob/main/src/Main.java)
+### An example of the output result of the above code
+![image](image.png)
+## This project contains following libraries.
+- [gson](https://github.com/google/gson) Parser for .json file.
