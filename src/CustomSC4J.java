@@ -5,11 +5,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.function.Consumer;
 
 public class CustomSC4J extends SC4J {
 
     @Override
-    protected String getHTTP(String URL, String USER_AGENT) {
+    protected void getHTTP(String URL, String USER_AGENT, Consumer<String> RESPONSE_HANDLER) {
         try {
             final URL requestUrl = new URL(URL);
 
@@ -25,7 +26,7 @@ public class CustomSC4J extends SC4J {
             }
             reader.close();
             connection.disconnect();
-            return response.toString();
+            RESPONSE_HANDLER.accept(response.toString());
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }

@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public abstract class SC4J {
 
@@ -29,82 +30,95 @@ public abstract class SC4J {
 
     /**
      * Get search result using soundcloud API
+     *
+     * @param ON_SUCCESS function executed when data is successfully fetched
      * @param KEYWORD keyword for searching
      * @param LIMIT search limit
      * @param OFFSET search offset
-     * @return search result
      */
-    public final List<SCData> getSearchResults(final String KEYWORD, final int LIMIT, final int OFFSET) {
-        String encodedKeyword = null;
-        try {
-            encodedKeyword = URLEncoder.encode(KEYWORD, "UTF-8");
-        } catch (final UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+    public final void getSearchResult(final Consumer<List<SCData>> ON_SUCCESS, final String KEYWORD, final int LIMIT, final int OFFSET) {
+        this.ensureClientId(clientId -> {
+            String encodedKeyword = null;
+            try {
+                encodedKeyword = URLEncoder.encode(KEYWORD, "UTF-8");
+            } catch (final UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
 
-        this.ensureClientId();
-        final String response = this.getHTTP(
-                String.format(
-                        "%s/search?q=%s&client_id=%s&limit=%d&offset=%d",
-                        API_URL,
-                        encodedKeyword,
-                        clientId,
-                        LIMIT,
-                        OFFSET
-                ),
-                USER_AGENT
-        );
-
-        final JsonObject responseJSON = GSON.fromJson(response, JsonObject.class);
-        return parseDataCollection(responseJSON.getAsJsonArray("collection"));
+            this.getHTTP(
+                    String.format(
+                            "%s/search?q=%s&client_id=%s&limit=%d&offset=%d",
+                            API_URL,
+                            encodedKeyword,
+                            clientId,
+                            LIMIT,
+                            OFFSET
+                    ),
+                    USER_AGENT,
+                    response -> {
+                        final JsonObject responseJSON = GSON.fromJson(response, JsonObject.class);
+                        ON_SUCCESS.accept(parseDataCollection(responseJSON.getAsJsonArray("collection")));
+                    }
+            );
+        });
     }
 
     /**
      * Get music mp3 data from music snippet
+     *
+     * @param ON_SUCCESS function executed when data is successfully fetched
      * @param result music snippet
-     * @return URL of mp3
      */
-    public final String getMP3URLOf(final SCMusic result) {
-        ensureClientId();
-
-        final String response = this.getHTTP(
-                String.format(
-                        "%s?client_id=%s&track_authorization=%s",
-                        result.getTrackId(),
-                        clientId,
-                        result.getTrackAuth()
-                ),
-                USER_AGENT
-        );
-
-        final JsonObject responseObject = GSON.fromJson(response, JsonObject.class);
-
-        return responseObject.get("url").getAsString();
+    public final void getMP3Url(final Consumer<String> ON_SUCCESS, final SCMusic result) {
+        ensureClientId(clientId -> {
+            this.getHTTP(
+                    String.format(
+                            "%s?client_id=%s&track_authorization=%s",
+                            result.getTrackId(),
+                            clientId,
+                            result.getTrackAuth()
+                    ),
+                    USER_AGENT,
+                    response -> {
+                        final JsonObject responseObject = GSON.fromJson(response, JsonObject.class);
+                        ON_SUCCESS.accept(responseObject.get("url").getAsString());
+                    }
+            );
+        });
     }
 
     /**
      * Get data uploaded by publisher
+     *
+     * @param ON_SUCCESS function executed when data is successfully fetched
      * @param publisher publisher
-     * @return data
      */
-    public final List<SCData> getUploads(final SCPublisher publisher, final int LIMIT, final int OFFSET) {
-        ensureClientId();
-        final String response = this.getHTTP(
-                String.format(
-                        "%s/users/%d/tracks?representation=&client_id=%s&limit=%d&offset=%d",
-                        API_URL,
-                        publisher.getId(),
-                        clientId,
-                        LIMIT,
-                        OFFSET
-                ),
-                USER_AGENT
-        );
-
-        final JsonObject responseJSON = GSON.fromJson(response, JsonObject.class);
-        return parseDataCollection(responseJSON.getAsJsonArray("collection"));
+    public final void getUploads(final Consumer<List<SCData>> ON_SUCCESS, SCPublisher publisher, final int LIMIT, final int OFFSET) {
+        ensureClientId(clientId -> {
+            this.getHTTP(
+                    String.format(
+                            "%s/users/%d/tracks?representation=&client_id=%s&limit=%d&offset=%d",
+                            API_URL,
+                            publisher.getId(),
+                            clientId,
+                            LIMIT,
+                            OFFSET
+                    ),
+                    USER_AGENT,
+                    response -> {
+                        final JsonObject responseJSON = GSON.fromJson(response, JsonObject.class);
+                        ON_SUCCESS.accept(parseDataCollection(responseJSON.getAsJsonArray("collection")));
+                    }
+            );
+        });
     }
 
+    /**
+     * Create an instance of SCPublisher from JsonObject
+     *
+     * @param user JsonObject
+     * @return instance of SCPublisher
+     */
     private final SCPublisher parsePublisher(final JsonObject user) {
         return new SCPublisher(
                 user.get("username").getAsString(),
@@ -114,7 +128,27 @@ public abstract class SC4J {
     }
 
     /**
+     * Create an instance of SCMusic from JsonObject
+     *
+     * @param j JsonObject
+     * @return instance of SCMusic
+     */
+    private final SCMusic parseMusic(final JsonObject j) {
+        return new SCMusic(
+                j.get("title") == null ? null : j.get("title").getAsString(), // title
+                this.parsePublisher(j.getAsJsonObject("user")), // publisher
+                j.get("artwork_url").isJsonNull() ? null : j.get("artwork_url").getAsString(), // artwork URL
+                j.getAsJsonObject("media")
+                        .getAsJsonArray("transcodings")
+                        .get(1).getAsJsonObject()
+                        .get("url").getAsString(), // track id
+                j.get("track_authorization").getAsString() // track auth
+        );
+    }
+
+    /**
      * Parse data collection of JsonObject
+     *
      * @param array JSONArray for parsing
      * @return parsed data list
      */
@@ -127,16 +161,7 @@ public abstract class SC4J {
 
                     switch (j.get("kind").getAsString()) {
                         case "track": {
-                            pushData = new SCMusic(
-                                    j.get("title") == null ? null : j.get("title").getAsString(), // title
-                                    this.parsePublisher(j.getAsJsonObject("user")), // publisher
-                                    j.get("artwork_url").isJsonNull() ? null : j.get("artwork_url").getAsString(), // artwork URL
-                                    j.getAsJsonObject("media")
-                                            .getAsJsonArray("transcodings")
-                                            .get(1).getAsJsonObject()
-                                            .get("url").getAsString(), // track id
-                                    j.get("track_authorization").getAsString() // track auth
-                            );
+                            pushData = this.parseMusic(j);
                             break;
                         }
                         case "user": {
@@ -172,14 +197,29 @@ public abstract class SC4J {
 
     /**
      * Fetch client id if necessary
+     *
+     * @param PROCESS process which one executed with client id.
      */
-    private final void ensureClientId() {
-        if (clientId != null) return;
-        final String a = this.getHTTP("https://soundcloud.com/", USER_AGENT)
-                .split("<script crossorigin src=\"https://a-v2.sndcdn.com/assets/")[5];
-        clientId = clip(this.getHTTP(String.format("https://a-v2.sndcdn.com/assets/%s", a.substring(0, a.indexOf("\""))), USER_AGENT),
-                "client_id=",
-                "\"");
+    private final void ensureClientId(final Consumer<String> PROCESS) {
+        if (clientId != null) {
+            PROCESS.accept(clientId);
+            return;
+        }
+        this.getHTTP(
+        "https://soundcloud.com/",
+            USER_AGENT,
+            response -> {
+                final String a = response.split("<script crossorigin src=\"https://a-v2.sndcdn.com/assets/")[5];
+                this.getHTTP(
+                        String.format("https://a-v2.sndcdn.com/assets/%s", a.substring(0, a.indexOf("\""))),
+                        USER_AGENT,
+                        response2 -> {
+                            clientId = clip(response2, "client_id=", "\"");
+                            PROCESS.accept(clientId);
+                        }
+                );
+            }
+        );
     }
 
     /**
@@ -194,5 +234,5 @@ public abstract class SC4J {
         return target.substring(startIndex, target.indexOf(last, startIndex));
     }
 
-    protected abstract String getHTTP(final String URL, final String USER_AGENT);
+    protected abstract void getHTTP(final String URL, final String USER_AGENT, final Consumer<String> RESPONSE_HANDLER);
 }
